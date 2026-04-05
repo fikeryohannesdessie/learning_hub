@@ -1,58 +1,120 @@
-# Cultural Heritage Preservation App (CHPA)
+# Learning Hub – Cultural Heritage Preservation App (CHPA)
 
 ## Project Overview
 
-The Cultural Heritage Preservation App (CHPA) is a platform designed to help users upload, share, and explore various cultural and heritage files, including documents (PDF), images (PNG), audio (MP3), and video (MP4). The application supports a hierarchy of user roles—Viewer, Researcher, and Administrator—each with different access permissions. The goal is to facilitate the preservation and dissemination of cultural heritage materials in a secure, organized, and collaborative environment.
+The **Learning Hub – Cultural Heritage Preservation App (CHPA)** is a platform designed to support learning, research, and preservation of cultural heritage materials. It allows users to upload, share, and explore various types of content including documents (PDF), images (PNG), audio (MP3), and video (MP4).
+
+The system is built to serve as both:
+- A **learning platform** for students and researchers  
+- A **digital archive** for cultural heritage preservation  
+
+It features a hierarchy of user roles—Viewer, Researcher, and Administrator—each with different access permissions. The goal is to create a secure, organized, and collaborative environment for both education and heritage preservation.
+
+---
 
 ## Team Members
 
-| Full Name           | ID  |
-|---------------------|------------------|
-|                     |                  |
-|                     |                  |
-|                     |                  |
+| Full Name            | ID              |
+|----------------------|-----------------|
+| Fiker Yohannes       | UGR/4617/16     |
+| Amanuel Solomon      | UGR/0540/16     |
+| Hermela Teklegebriel | UGR/5174/16     |
+| Yohannes Gumeta      | UGR/4852/16     |
+| Abel Begashaw        | UGR//16         |
 
-
+---
 
 ## Features
 
-### 1. Heritage File Management (CRUD)
-- Upload heritage files (PDF, PNG, MP3, MP4)
-- View/download files uploaded by others
-- Edit file metadata (title, description, tags, etc.)
-- Delete files (with appropriate permissions)
+### 1. Learning & Heritage Content Management (CRUD)
+- Upload learning and heritage materials (PDF, PNG, MP3, MP4)
+- View and download shared resources
+- Edit file metadata (title, description, tags, category)
+- Delete content (based on permissions)
+
+---
 
 ### 2. User Roles & Access Control
-- **Viewer:** Can browse and view/download public heritage files
-- **Researcher:** Can upload new files, edit their own uploads, and access additional research features
-- **Administrator:** Full access, including managing users, approving uploads, and deleting any file
+
+- **Viewer**
+  - Browse and access public learning materials
+  - View and download files
+
+- **Researcher**
+  - Upload new educational or heritage content
+  - Edit their own uploads
+  - Access extended research-related features
+
+- **Administrator**
+  - Full system control
+  - Manage users and roles
+  - Approve or remove content
+  - Delete any file
+
+---
 
 ### 3. Authentication & Authorization
-- User signup, login, and logout
+- User registration (signup)
+- Login and logout
 - Delete account
-- Role-based access to features and screens
+- Role-based access control for all features
+
+---
 
 ### 4. Backend (REST API)
-- Serves the frontend with endpoints for file management, user management, and authentication/authorization
-- Runs locally (not hosted on the internet)
+- Provides endpoints for:
+  - File management
+  - User management
+  - Authentication & authorization
+- Runs locally (no cloud hosting)
+
+---
 
 ### 5. Testing
-- Widget, unit, and integration testing for both frontend and backend components
+- Widget testing (UI components)
+- Unit testing (business logic)
+- Integration testing (system workflows)
+
+---
 
 ## Architecture
 
-The project follows Domain-Driven Design (DDD) principles and is structured according to the recommended architecture:
+The project follows **Domain-Driven Design (DDD)** principles and is structured into the following layers:
 
-- **Presentation Layer:** Widgets, UI, navigation, and state management
-- **Application Layer:** BLoCs (Business Logic Components) or use cases
-- **Domain Layer:** Entities, value objects, and business logic
-- **Infrastructure Layer:** Repositories, data providers, API, and local database
+- **Presentation Layer**
+  - UI components, widgets, navigation, and state management
 
-See the DDD Architecture [here](https://resocoder.com/wp-content/uploads/2020/03/DDD-Flutter1-Diagram-v3.svg).
+- **Application Layer**
+  - Business logic (BLoC / use cases)
 
-## Additional Notes
-- The project does **not** use Firebase/Firestore or any cloud backend for authentication or data storage.
-- The REST API and database run locally.
-- All features and requirements are documented in this README.
+- **Domain Layer**
+  - Core entities and business rules
+
+- **Infrastructure Layer**
+  - Repositories, APIs, and local database
+
+Architecture reference:  
+https://resocoder.com/wp-content/uploads/2020/03/DDD-Flutter1-Diagram-v3.svg
 
 ---
+
+## Additional Notes
+
+- No Firebase or cloud services are used  
+- All data and APIs run locally  
+- Designed for both **educational use (Learning Hub)** and **cultural preservation (CHPA)**  
+- Fully documented within this repository  
+
+---
+
+## Summary
+
+This project combines:
+- A **Learning Management System (LMS)-like platform**
+- A **Cultural Heritage Archive System**
+
+Making it a hybrid solution that supports:
+- Learning
+- Research
+- Preservation
+- Collaboration
