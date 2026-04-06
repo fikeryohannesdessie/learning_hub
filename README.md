@@ -93,8 +93,7 @@ The project follows **Domain-Driven Design (DDD)** principles and is structured 
 - **Infrastructure Layer**
   - Repositories, APIs, and local database
 
-Architecture reference:  
-https://resocoder.com/wp-content/uploads/2020/03/DDD-Flutter1-Diagram-v3.svg
+
 
 ---
 
