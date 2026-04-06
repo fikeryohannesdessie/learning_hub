@@ -20,7 +20,7 @@ It features a hierarchy of user roles—Viewer, Researcher, and Administrator—
 | Amanuel Solomon      | UGR/0540/16     |
 | Hermela Teklegebriel | UGR/5174/16     |
 | Yohannes Gumeta      | UGR/4852/16     |
-| Abel Begashaw        | UGR//16         |
+| Abel Begashaw        | ATR/8919/13    |
 
 ---
 
