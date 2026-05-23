@@ -1,59 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../providers/auth_controller.dart';
+import '../../../core/localization/localization.dart';
+import '../../../core/widgets/heritage_logo.dart';
+import '../../../core/widgets/shared_app_bar.dart';
+import '../../../core/widgets/glass_card.dart';
+import '../../../core/theme/app_theme.dart';
+import '../domain/auth_domain.dart';
 
-import '../../../../core/localization/translated_text.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/glass_card.dart';
-import '../../../../core/routing/app_router.dart';
-import '../../../../core/widgets/heritage_logo.dart';
-import '../../../../core/widgets/shared_app_bar.dart';
-
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen>
+class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _obscurePassword = true;
-  late final AnimationController _fadeController;
-  late final Animation<double> _fadeAnimation;
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
+  late AnimationController _fadeCtrl;
+  late Animation<double> _fadeAnim;
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
+    _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
+    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
   }
 
   @override
   void dispose() {
-    _fadeController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _fadeCtrl.dispose();
     super.dispose();
+  }
+
+  void _login() async {
+    if (_formKey.currentState!.validate()) {
+      await ref
+          .read(authControllerProvider.notifier)
+          .signIn(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+      if (!mounted) {
+        return;
+      }
+      final authState = ref.read(authControllerProvider);
+      if (authState.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: TranslatedText('Login Failed: ${authState.error}'),
+            backgroundColor: AppTheme.errorColor,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authControllerProvider);
     final size = MediaQuery.of(context).size;
 
     return Scaffold(
       backgroundColor: AppTheme.kBg,
       extendBodyBehindAppBar: true,
-      appBar: const SharedAppBar(switcherOnRight: true),
+      appBar: SharedAppBar(showProfile: false, switcherOnRight: true),
       body: Stack(
         children: [
+          // ── Background radial ambient glow ─────────────────────────────
           Positioned(
             top: -size.height * 0.15,
             left: size.width * 0.5 - 200,
@@ -72,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
+          // Bottom warm glow
           Positioned(
             bottom: -80,
             left: size.width * 0.5 - 160,
@@ -89,9 +114,11 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
+
+          // ── Main content ───────────────────────────────────────────────
           SafeArea(
             child: FadeTransition(
-              opacity: _fadeAnimation,
+              opacity: _fadeAnim,
               child: Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
@@ -100,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                   child: Column(
                     children: [
+                      // Logo + branding
                       const AnimatedHeritageLogoWidget(size: 88),
                       const SizedBox(height: 20),
                       const Text(
@@ -123,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      TranslatedText(
                         'Preserving our shared heritage',
                         style: TextStyle(
                           color: AppTheme.kParchment.withOpacity(0.5),
@@ -131,115 +159,138 @@ class _LoginScreenState extends State<LoginScreen>
                         ),
                       ),
                       const SizedBox(height: 40),
+
+                      // ── Login card ─────────────────────────────────────
                       GlassCard(
                         frosted: true,
                         borderRadius: 24,
                         padding: const EdgeInsets.all(28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const TranslatedText(
-                              'Welcome Back',
-                              style: TextStyle(
-                                color: AppTheme.kParchment,
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 28),
-                            TextField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                label: TranslatedText('Email'),
-                                hintText: 'your@email.com',
-                                prefixIcon: Icon(Icons.email_outlined),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            TextField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
-                                label: const TranslatedText('Password'),
-                                hintText: '••••••••',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                suffixIcon: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _obscurePassword = !_obscurePassword;
-                                    });
-                                  },
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color:
-                                        AppTheme.kParchment.withOpacity(0.5),
-                                  ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const TranslatedText(
+                                'Welcome Back',
+                                style: TextStyle(
+                                  color: AppTheme.kParchment,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
                                 ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () => context.push('/forgot-password'),
-                                style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: const Size(0, 0),
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
+                              const SizedBox(height: 28),
+
+                              // Email
+                              TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                style: const TextStyle(
+                                  color: AppTheme.kParchment,
                                 ),
-                                child: const TranslatedText(
-                                  'Forgot Password?',
-                                  style: TextStyle(
-                                    color: AppTheme.kAccent,
-                                    fontSize: 13,
-                                  ),
+                                decoration: const InputDecoration(
+                                  label: TranslatedText('Email'),
+                                  hintText: 'your@email.com',
+                                  prefixIcon: Icon(Icons.email_outlined),
                                 ),
+                                validator: (v) => EmailAddress.isValid(v ?? '')
+                                    ? null
+                                    : 'Enter email',
                               ),
-                            ),
-                            const SizedBox(height: 20),
-                            ElevatedButton(
-                              onPressed: () {
-                                final email = _emailController.text.trim().toLowerCase();
-                                final password = _passwordController.text.trim();
-                                if (email == 'admin@chpa.org' &&
-                                    (password == 'admin 123' || password == 'admin123')) {
-                                  AppRouter.currentUserRole = 'admin';
-                                  context.go('/admin-dashboard');
-                                } else {
-                                  AppRouter.currentUserRole = 'viewer';
-                                  context.go('/home');
-                                }
-                              },
-                              child: const TranslatedText('Sign In'),
-                            ),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: () => context.push('/signup'),
-                              child: const Wrap(
-                                children: [
-                                  TranslatedText(
-                                    "Don't have an account? ",
-                                    style: TextStyle(
-                                      color: Colors.white60,
-                                      fontSize: 14,
+                              const SizedBox(height: 16),
+
+                              // Password
+                              TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                style: const TextStyle(
+                                  color: AppTheme.kParchment,
+                                ),
+                                decoration: InputDecoration(
+                                  label: const TranslatedText('Password'),
+                                  hintText: '••••••••',
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: AppTheme.kParchment.withOpacity(
+                                        0.5,
+                                      ),
+                                    ),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
                                     ),
                                   ),
-                                  TranslatedText(
-                                    'Sign Up',
+                                ),
+                                validator: (v) => Password.isValid(v ?? '')
+                                    ? null
+                                    : 'Password too short',
+                              ),
+
+                              // Forgot password
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () =>
+                                      context.push('/forgot-password'),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    minimumSize: const Size(0, 0),
+                                    tapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  ),
+                                  child: const TranslatedText(
+                                    'Forgot Password?',
                                     style: TextStyle(
                                       color: AppTheme.kAccent,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
+                                      fontSize: 13,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 20),
+
+                              // Login button
+                              authState.isLoading
+                                  ? const Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppTheme.kAccent,
+                                      ),
+                                    )
+                                  : ElevatedButton(
+                                      onPressed: _login,
+                                      child: const TranslatedText('Sign In'),
+                                    ),
+                              const SizedBox(height: 16),
+
+                              // Sign up
+                              TextButton(
+                                onPressed: () => context.push('/signup'),
+                                child: Wrap(
+                                  children: const [
+                                    TranslatedText(
+                                      "Don't have an account? ",
+                                      style: TextStyle(
+                                        color: Colors.white60,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    TranslatedText(
+                                      'Sign Up',
+                                      style: TextStyle(
+                                        color: AppTheme.kAccent,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
