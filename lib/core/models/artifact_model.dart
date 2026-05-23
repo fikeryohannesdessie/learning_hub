@@ -1,118 +1,67 @@
-class ArtifactModel {
-  final String id;
-  final String title;
-  final String description;
-  final String authorId;
-  final String authorName;
-  final String status; // pending, approved, rejected
-  final List<HeritageSectionModel> sections;
-  final List<String> viewerIds;
-  final DateTime createdAt;
-  final String? rejectionReason;
-  final String? thumbnailUrl;
-  final bool? isSequential;
-  final String? classification;
-  final String? detailedDescription;
-  final List<String>? heritageSignificance;
+import '../../features/artifacts/domain/artifact_domain.dart' as domain;
 
+class ArtifactModel extends domain.Artifact {
   ArtifactModel({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.authorId,
-    required this.authorName,
-    this.status = 'pending',
-    required this.sections,
-    this.viewerIds = const [],
-    required this.createdAt,
-    this.rejectionReason,
-    this.thumbnailUrl = '',
-    this.isSequential = true,
-    this.classification = 'tangible',
-    this.detailedDescription,
-    this.heritageSignificance,
-  });
+    required String id,
+    required String title,
+    required String description,
+    required String authorId,
+    required String authorName,
+    String status = 'pending',
+    required List<HeritageSectionModel> sections,
+    List<String> viewerIds = const [],
+    required DateTime createdAt,
+    String? rejectionReason,
+    String? thumbnailUrl = '',
+    bool? isSequential = true,
+    String? classification = 'tangible',
+    String? detailedDescription,
+    List<String>? heritageSignificance,
+  }) : super(
+         id: id,
+         title: title,
+         description: description,
+         authorId: authorId,
+         authorName: authorName,
+         status: status,
+         sections: sections,
+         viewerIds: viewerIds,
+         createdAt: createdAt,
+         rejectionReason: rejectionReason,
+         thumbnailUrl: thumbnailUrl ?? '',
+         isSequential: isSequential ?? true,
+         classification: classification ?? 'tangible',
+         detailedDescription: detailedDescription,
+         heritageSignificance: heritageSignificance,
+       );
 
-  factory ArtifactModel.fromJson(Map<String, dynamic> json) {
-    final rawStatus =
-        ((json['status'] ?? json['Status'] ?? 'pending') as String)
-            .trim()
-            .toLowerCase();
-    final normalizedStatus = rawStatus.isEmpty
-        ? 'pending'
-        : (rawStatus == 'approved' || rawStatus == 'rejected'
-              ? rawStatus
-              : 'pending');
-
-    final rawClassification =
-        ((json['classification'] ??
-                    json['Classification'] ??
-                    json['gradeLevel'] ??
-                    'tangible')
-                as String)
-            .trim()
-            .toLowerCase();
-    final normalizedClassification = rawClassification == 'intangible'
-        ? 'intangible'
-        : 'tangible';
-
+  factory ArtifactModel.fromDomain(domain.Artifact artifact) {
     return ArtifactModel(
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      title: (json['title'] ?? json['Title'] ?? 'Untitled Artifact') as String,
-      description: (json['description'] ?? json['Description'] ?? '') as String,
-      authorId: (json['authorId'] ?? json['AuthorId'] ?? '') as String,
-      authorName:
-          (json['authorName'] ?? json['AuthorName'] ?? 'Anonymous') as String,
-      status: normalizedStatus,
-      sections: (json['sections'] ?? json['Sections'] ?? json['chapters'] ?? [])
-          .map(
-            (e) => HeritageSectionModel.fromJson(Map<String, dynamic>.from(e)),
-          )
+      id: artifact.id,
+      title: artifact.title,
+      description: artifact.description,
+      authorId: artifact.authorId,
+      authorName: artifact.authorName,
+      status: artifact.status,
+      sections: artifact.sections
+          .map(HeritageSectionModel.fromDomain)
           .toList(),
-      viewerIds: List<String>.from(
-        json['viewerIds'] ?? json['enrolledViewerIds'] ?? [],
-      ),
-      createdAt:
-          DateTime.tryParse(
-            (json['createdAt'] ?? json['CreatedAt'] ?? '') as String,
-          ) ??
-          DateTime.now(),
-      rejectionReason:
-          (json['rejectionReason'] ?? json['RejectionReason']) as String?,
-      thumbnailUrl:
-          (json['thumbnailUrl'] ?? json['ThumbnailUrl'] ?? '') as String,
-      isSequential:
-          (json['isSequential'] ?? json['IsSequential'] ?? true) as bool,
-      classification: normalizedClassification,
-      detailedDescription:
-          (json['detailedDescription'] ?? json['DetailedDescription'])
-              as String?,
-      heritageSignificance: List<String>.from(
-        json['heritageSignificance'] ?? json['HeritageOutcomes'] ?? [],
-      ),
+      viewerIds: artifact.viewerIds,
+      createdAt: artifact.createdAt,
+      rejectionReason: artifact.rejectionReason,
+      thumbnailUrl: artifact.thumbnailUrl,
+      isSequential: artifact.isSequential,
+      classification: artifact.classification,
+      detailedDescription: artifact.detailedDescription,
+      heritageSignificance: artifact.heritageSignificance,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'authorId': authorId,
-      'authorName': authorName,
-      'status': status,
-      'sections': sections.map((e) => e.toJson()).toList(),
-      'viewerIds': viewerIds,
-      'createdAt': createdAt.toIso8601String(),
-      'rejectionReason': rejectionReason,
-      'thumbnailUrl': thumbnailUrl ?? '',
-      'isSequential': isSequential ?? true,
-      'classification': classification ?? 'tangible',
-      'detailedDescription': detailedDescription,
-      'heritageSignificance': heritageSignificance,
-    };
-  }
+  @override
+  List<HeritageSectionModel> get sections =>
+      super.sections.cast<HeritageSectionModel>();
 
+  @override
   ArtifactModel copyWith({
     String? id,
     String? title,
@@ -120,7 +69,7 @@ class ArtifactModel {
     String? authorId,
     String? authorName,
     String? status,
-    List<HeritageSectionModel>? sections,
+    List<domain.HeritageSection>? sections,
     List<String>? viewerIds,
     DateTime? createdAt,
     String? rejectionReason,
@@ -137,7 +86,9 @@ class ArtifactModel {
       authorId: authorId ?? this.authorId,
       authorName: authorName ?? this.authorName,
       status: status ?? this.status,
-      sections: sections ?? this.sections,
+      sections: (sections ?? this.sections)
+          .map(HeritageSectionModel.fromDomain)
+          .toList(),
       viewerIds: viewerIds ?? this.viewerIds,
       createdAt: createdAt ?? this.createdAt,
       rejectionReason: rejectionReason ?? this.rejectionReason,
@@ -150,61 +101,46 @@ class ArtifactModel {
   }
 
   List<HeritageSectionModel> get Sections => sections;
-  List<String> get HeritageOutcomes => heritageSignificance ?? [];
+  List<String>? get HeritageOutcomes => heritageSignificance;
 }
 
-class HeritageSectionModel {
-  final String id;
-  final String title;
-  final List<HeritagePartModel> parts;
-  final AnalysisModel? analysis;
-
+class HeritageSectionModel extends domain.HeritageSection {
   HeritageSectionModel({
-    required this.id,
-    required this.title,
-    required this.parts,
-    this.analysis,
-  });
+    required String id,
+    required String title,
+    required List<HeritagePartModel> parts,
+    AnalysisModel? analysis,
+  }) : super(id: id, title: title, parts: parts, analysis: analysis);
 
-  factory HeritageSectionModel.fromJson(Map<String, dynamic> json) {
+  factory HeritageSectionModel.fromDomain(domain.HeritageSection section) {
     return HeritageSectionModel(
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      title: (json['title'] ?? json['Title'] ?? 'Untitled Section') as String,
-      parts: (json['parts'] ?? json['Parts'] ?? json['topics'] ?? [])
-          .map((e) => HeritagePartModel.fromJson(Map<String, dynamic>.from(e)))
-          .toList(),
-      analysis: json['analysis'] != null
-          ? AnalysisModel.fromJson(Map<String, dynamic>.from(json['analysis']))
-          : json['Analysis'] != null
-          ? AnalysisModel.fromJson(Map<String, dynamic>.from(json['Analysis']))
-          : (json['quiz'] != null
-                ? AnalysisModel.fromJson(
-                    Map<String, dynamic>.from(json['quiz']),
-                  )
-                : null),
+      id: section.id,
+      title: section.title,
+      parts: section.parts.map(HeritagePartModel.fromDomain).toList(),
+      analysis: section.analysis != null
+          ? AnalysisModel.fromDomain(section.analysis!)
+          : null,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'parts': parts.map((e) => e.toJson()).toList(),
-      'analysis': analysis?.toJson(),
-    };
-  }
+  @override
+  List<HeritagePartModel> get parts => super.parts.cast<HeritagePartModel>();
 
+  @override
+  AnalysisModel? get analysis => super.analysis as AnalysisModel?;
+
+  @override
   HeritageSectionModel copyWith({
     String? id,
     String? title,
-    List<HeritagePartModel>? parts,
-    AnalysisModel? analysis,
+    List<domain.HeritagePart>? parts,
+    domain.Analysis? analysis,
   }) {
     return HeritageSectionModel(
       id: id ?? this.id,
       title: title ?? this.title,
-      parts: parts ?? this.parts,
-      analysis: analysis ?? this.analysis,
+      parts: (parts ?? this.parts).map(HeritagePartModel.fromDomain).toList(),
+      analysis: analysis != null ? AnalysisModel.fromDomain(analysis) : this.analysis,
     );
   }
 
@@ -212,149 +148,116 @@ class HeritageSectionModel {
   AnalysisModel? get Analysis => analysis;
 }
 
-class HeritagePartModel {
-  final String id;
-  final String title;
-  final List<ArtifactDetailModel> details;
-
+class HeritagePartModel extends domain.HeritagePart {
   HeritagePartModel({
-    required this.id,
-    required this.title,
-    required this.details,
-  });
+    required String id,
+    required String title,
+    required List<ArtifactDetailModel> details,
+  }) : super(id: id, title: title, details: details);
 
-  factory HeritagePartModel.fromJson(Map<String, dynamic> json) {
+  factory HeritagePartModel.fromDomain(domain.HeritagePart part) {
     return HeritagePartModel(
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      title: (json['title'] ?? json['Title'] ?? 'Untitled Part') as String,
-      details: (json['details'] ?? json['Details'] ?? json['subtopics'] ?? [])
-          .map(
-            (e) => ArtifactDetailModel.fromJson(Map<String, dynamic>.from(e)),
-          )
-          .toList(),
+      id: part.id,
+      title: part.title,
+      details: part.details.map(ArtifactDetailModel.fromDomain).toList(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'details': details.map((e) => e.toJson()).toList(),
-    };
-  }
+  @override
+  List<ArtifactDetailModel> get details =>
+      super.details.cast<ArtifactDetailModel>();
 
+  @override
   HeritagePartModel copyWith({
     String? id,
     String? title,
-    List<ArtifactDetailModel>? details,
+    List<domain.ArtifactDetail>? details,
   }) {
     return HeritagePartModel(
       id: id ?? this.id,
       title: title ?? this.title,
-      details: details ?? this.details,
+      details: (details ?? this.details)
+          .map(ArtifactDetailModel.fromDomain)
+          .toList(),
     );
   }
 
   List<ArtifactDetailModel> get subtopics => details;
 }
 
-class ArtifactDetailModel {
-  final String id;
-  final String title;
-  final List<ArtifactContentItem> contents;
-
+class ArtifactDetailModel extends domain.ArtifactDetail {
   ArtifactDetailModel({
-    required this.id,
-    required this.title,
-    required this.contents,
-  });
+    required String id,
+    required String title,
+    required List<ArtifactContentItem> contents,
+  }) : super(id: id, title: title, contents: contents);
 
-  factory ArtifactDetailModel.fromJson(Map<String, dynamic> json) {
+  factory ArtifactDetailModel.fromDomain(domain.ArtifactDetail detail) {
     return ArtifactDetailModel(
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      title: (json['title'] ?? json['Title'] ?? 'Untitled Detail') as String,
-      contents: (json['contents'] ?? json['Contents'] ?? [])
-          .map(
-            (e) => ArtifactContentItem.fromJson(Map<String, dynamic>.from(e)),
-          )
-          .toList(),
+      id: detail.id,
+      title: detail.title,
+      contents: detail.contents.map(ArtifactContentItem.fromDomain).toList(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'contents': contents.map((e) => e.toJson()).toList(),
-    };
-  }
+  @override
+  List<ArtifactContentItem> get contents =>
+      super.contents.cast<ArtifactContentItem>();
 
+  @override
   ArtifactDetailModel copyWith({
     String? id,
     String? title,
-    List<ArtifactContentItem>? contents,
+    List<domain.ArtifactContentItem>? contents,
   }) {
     return ArtifactDetailModel(
       id: id ?? this.id,
       title: title ?? this.title,
-      contents: contents ?? this.contents,
+      contents: (contents ?? this.contents)
+          .map(ArtifactContentItem.fromDomain)
+          .toList(),
     );
   }
 }
 
-class ArtifactContentItem {
-  final String type; // text, pdf, video, simulation
-  final String? text;
-  final String? fileId; // for local/remote file reference
-  final String? url; // for external video links
-  final String? simulationId; // identifier for native simulations
-  final String id;
-  final String title;
-  final bool isResource;
-  final String? resourceCategory; // Documentation, Media, Field Notes, etc.
-
+class ArtifactContentItem extends domain.ArtifactContentItem {
   ArtifactContentItem({
-    required this.type,
-    this.text,
-    this.fileId,
-    this.url,
-    this.simulationId,
-    required this.id,
-    required this.title,
-    this.isResource = false,
-    this.resourceCategory,
-  });
+    required String type,
+    String? text,
+    String? fileId,
+    String? url,
+    String? simulationId,
+    required String id,
+    required String title,
+    bool isResource = false,
+    String? resourceCategory,
+  }) : super(
+         type: type,
+         text: text,
+         fileId: fileId,
+         url: url,
+         simulationId: simulationId,
+         id: id,
+         title: title,
+         isResource: isResource,
+         resourceCategory: resourceCategory,
+       );
 
-  factory ArtifactContentItem.fromJson(Map<String, dynamic> json) {
+  factory ArtifactContentItem.fromDomain(domain.ArtifactContentItem item) {
     return ArtifactContentItem(
-      type: (json['type'] ?? json['Type'] ?? 'text') as String,
-      text: (json['text'] ?? json['Text']) as String?,
-      fileId: (json['fileId'] ?? json['FileId']) as String?,
-      url: (json['url'] ?? json['Url']) as String?,
-      simulationId:
-          (json['simulationId'] ?? json['SimulationId']) as String?,
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      title: (json['title'] ?? json['Title'] ?? 'Untitled Item') as String,
-      isResource: (json['isResource'] ?? json['IsResource'] ?? false) as bool,
-      resourceCategory:
-          (json['resourceCategory'] ?? json['ResourceCategory']) as String?,
+      type: item.type,
+      text: item.text,
+      fileId: item.fileId,
+      url: item.url,
+      simulationId: item.simulationId,
+      id: item.id,
+      title: item.title,
+      isResource: item.isResource,
+      resourceCategory: item.resourceCategory,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'text': text,
-      'fileId': fileId,
-      'url': url,
-      'id': id,
-      'title': title,
-      'isResource': isResource,
-      'resourceCategory': resourceCategory,
-      'simulationId': simulationId,
-    };
-  }
-
+  @override
   ArtifactContentItem copyWith({
     String? type,
     String? text,
@@ -371,111 +274,72 @@ class ArtifactContentItem {
       text: text ?? this.text,
       fileId: fileId ?? this.fileId,
       url: url ?? this.url,
+      simulationId: simulationId ?? this.simulationId,
       id: id ?? this.id,
       title: title ?? this.title,
       isResource: isResource ?? this.isResource,
       resourceCategory: resourceCategory ?? this.resourceCategory,
-      simulationId: simulationId ?? this.simulationId,
     );
   }
 }
 
-class AnalysisModel {
-  final String id;
-  final List<EvidenceModel> evidence;
-
+class AnalysisModel extends domain.Analysis {
   AnalysisModel({
-    required this.id,
+    required String id,
     List<EvidenceModel>? evidence,
     List<EvidenceModel>? evidences,
-  }) : this.evidence = evidence ?? evidences ?? const [];
+  }) : super(id: id, evidence: evidence ?? evidences ?? const []);
 
-  factory AnalysisModel.fromJson(Map<String, dynamic> json) {
+  factory AnalysisModel.fromDomain(domain.Analysis analysis) {
     return AnalysisModel(
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      evidence:
-          (json['evidence'] ??
-                  json['Evidence'] ??
-                  json['evidences'] ??
-                  json['questions'] ??
-                  [])
-              .map((e) => EvidenceModel.fromJson(Map<String, dynamic>.from(e)))
-              .toList(),
+      id: analysis.id,
+      evidence: analysis.evidence.map(EvidenceModel.fromDomain).toList(),
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {'id': id, 'evidence': evidence.map((e) => e.toJson()).toList()};
-  }
+  @override
+  List<EvidenceModel> get evidence => super.evidence.cast<EvidenceModel>();
 
-  AnalysisModel copyWith({String? id, List<EvidenceModel>? evidence}) {
+  @override
+  AnalysisModel copyWith({String? id, List<domain.Evidence>? evidence}) {
     return AnalysisModel(
       id: id ?? this.id,
-      evidence: evidence ?? this.evidence,
+      evidence: (evidence ?? this.evidence).map(EvidenceModel.fromDomain).toList(),
     );
   }
 
   List<EvidenceModel> get evidences => evidence;
 }
 
-class EvidenceModel {
-  final String questionText;
-  final List<String> options;
-  final int correctAnswerIndex;
-  final bool isShortAnswer;
-  final String? correctShortAnswer;
-
+class EvidenceModel extends domain.Evidence {
   EvidenceModel({
     String? questionText,
     List<String>? options,
     int? correctAnswerIndex,
-    this.isShortAnswer = false,
-    this.correctShortAnswer,
+    bool isShortAnswer = false,
+    String? correctShortAnswer,
     String? factText,
     List<String>? possibilities,
     int? verifiedIndex,
-  }) : this.questionText = questionText ?? factText ?? '',
-       this.options = options ?? possibilities ?? const [],
-       this.correctAnswerIndex = correctAnswerIndex ?? verifiedIndex ?? 0;
+  }) : super(
+         questionText: questionText ?? factText ?? '',
+         options: options ?? possibilities ?? const [],
+         correctAnswerIndex: correctAnswerIndex ?? verifiedIndex ?? 0,
+         isShortAnswer: isShortAnswer,
+         correctShortAnswer: correctShortAnswer,
+       );
 
-  factory EvidenceModel.fromJson(Map<String, dynamic> json) {
+  factory EvidenceModel.fromDomain(domain.Evidence evidence) {
     return EvidenceModel(
-      questionText: (json['questionText'] ?? "") != ""
-          ? json['questionText'] as String
-          : (json['factText'] ?? json['FactText'] ?? '') as String,
-      options: List<String>.from(
-        json['options'] ?? json['Options'] ?? json['possibilities'] ?? [],
-      ),
-      correctAnswerIndex:
-          (json['correctAnswerIndex'] ??
-                  json['CorrectAnswerIndex'] ??
-                  json['verifiedIndex'] ??
-                  0)
-              as int,
-      isShortAnswer:
-          (json['isShortAnswer'] ??
-                  json['IsShortAnswer'] ??
-                  json['isSummary'] ??
-                  false)
-              as bool,
-      correctShortAnswer:
-          (json['correctShortAnswer'] ??
-                  json['CorrectShortAnswer'] ??
-                  json['summaryText'])
-              as String?,
+      questionText: evidence.questionText,
+      options: evidence.options,
+      correctAnswerIndex: evidence.correctAnswerIndex,
+      isShortAnswer: evidence.isShortAnswer,
+      correctShortAnswer: evidence.correctShortAnswer,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'questionText': questionText,
-      'options': options,
-      'correctAnswerIndex': correctAnswerIndex,
-      'isShortAnswer': isShortAnswer,
-      'correctShortAnswer': correctShortAnswer,
-    };
-  }
-
+  @override
   EvidenceModel copyWith({
     String? questionText,
     List<String>? options,
@@ -495,4 +359,56 @@ class EvidenceModel {
   String get factText => questionText;
   List<String> get possibilities => options;
   int get verifiedIndex => correctAnswerIndex;
+}
+
+class AnalysisResultModel extends domain.AnalysisResult {
+  AnalysisResultModel({
+    required String userId,
+    required String userName,
+    required String artifactId,
+    required String sectionId,
+    required int score,
+    required int totalQuestions,
+    required DateTime completedAt,
+  }) : super(
+         userId: userId,
+         userName: userName,
+         artifactId: artifactId,
+         sectionId: sectionId,
+         score: score,
+         totalQuestions: totalQuestions,
+         completedAt: completedAt,
+       );
+
+  factory AnalysisResultModel.fromDomain(domain.AnalysisResult result) {
+    return AnalysisResultModel(
+      userId: result.userId,
+      userName: result.userName,
+      artifactId: result.artifactId,
+      sectionId: result.sectionId,
+      score: result.score,
+      totalQuestions: result.totalQuestions,
+      completedAt: result.completedAt,
+    );
+  }
+
+  AnalysisResultModel copyWith({
+    String? userId,
+    String? userName,
+    String? artifactId,
+    String? sectionId,
+    int? score,
+    int? totalQuestions,
+    DateTime? completedAt,
+  }) {
+    return AnalysisResultModel(
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      artifactId: artifactId ?? this.artifactId,
+      sectionId: sectionId ?? this.sectionId,
+      score: score ?? this.score,
+      totalQuestions: totalQuestions ?? this.totalQuestions,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
 }
