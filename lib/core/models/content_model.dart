@@ -1,74 +1,43 @@
-class ContentModel {
-  final String id;
-  final String title;
-  final String type; // pdf, Analysis
-  final String authorId;
-  final String authorName;
-  final String status; // pending, approved, rejected
-  final String? url; // Firebase Storage URL
-  final String? gradeLevel; // highschool, college
-  final String? subject;
-  final String? description;
-  final DateTime uploadedAt;
-  final DateTime? approvedAt;
-  final Map<String, dynamic>? extraData;
-  final String? rejectionReason;
+import '../../features/content/domain/content_domain.dart';
 
+class ContentModel extends LearningContent {
   ContentModel({
-    required this.id,
-    required this.title,
-    required this.type,
-    required this.authorId,
-    required this.authorName,
-    this.status = 'pending',
-    this.url,
-    this.gradeLevel = 'highschool',
-    this.subject = 'General',
-    this.description,
-    required this.uploadedAt,
-    this.approvedAt,
-    this.extraData,
-    this.rejectionReason,
+    required super.id,
+    required super.title,
+    required super.type,
+    required super.authorId,
+    required super.authorName,
+    super.status,
+    super.url,
+    super.gradeLevel,
+    super.subject,
+    super.description,
+    required super.uploadedAt,
+    super.approvedAt,
+    super.extraData,
+    super.rejectionReason,
   });
 
-  factory ContentModel.fromJson(Map<String, dynamic> json) {
+  factory ContentModel.fromDomain(LearningContent content) {
     return ContentModel(
-      id: (json['id'] ?? json['Id'] ?? '') as String,
-      title: (json['title'] ?? json['Title'] ?? 'Untitled') as String,
-      type: (json['type'] ?? json['Type'] ?? 'document') as String,
-      authorId: (json['authorId'] ?? json['AuthorId'] ?? '') as String,
-      authorName: (json['authorName'] ?? json['AuthorName'] ?? 'Anonymous') as String,
-      status: (json['status'] ?? json['Status'] ?? 'pending') as String,
-      url: (json['url'] ?? json['Url']) as String?,
-      gradeLevel: (json['gradeLevel'] ?? json['GradeLevel'] ?? 'tangible') as String?,
-      subject: (json['subject'] ?? json['Subject'] ?? 'General') as String?,
-      description: (json['description'] ?? json['Description']) as String?,
-      uploadedAt: DateTime.tryParse((json['uploadedAt'] ?? json['UploadedAt'] ?? '') as String) ?? DateTime.now(),
-      approvedAt: json['approvedAt'] != null ? DateTime.tryParse(json['approvedAt'] as String) : null,
-      extraData: json['extraData'] != null ? Map<String, dynamic>.from(json['extraData'] as Map) : null,
-      rejectionReason: (json['rejectionReason'] ?? json['RejectionReason']) as String?,
+      id: content.id,
+      title: content.title,
+      type: content.type,
+      authorId: content.authorId,
+      authorName: content.authorName,
+      status: content.status,
+      url: content.url,
+      gradeLevel: content.gradeLevel,
+      subject: content.subject,
+      description: content.description,
+      uploadedAt: content.uploadedAt,
+      approvedAt: content.approvedAt,
+      extraData: content.extraData,
+      rejectionReason: content.rejectionReason,
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'title': title,
-      'type': type,
-      'authorId': authorId,
-      'authorName': authorName,
-      'status': status,
-      'url': url,
-      'subject': subject ?? 'General',
-      'gradeLevel': gradeLevel ?? 'highschool',
-      'description': description,
-      'uploadedAt': uploadedAt.toIso8601String(),
-      'approvedAt': approvedAt?.toIso8601String(),
-      'extraData': extraData,
-      'rejectionReason': rejectionReason,
-    };
-  }
-
+  @override
   ContentModel copyWith({
     String? id,
     String? title,
