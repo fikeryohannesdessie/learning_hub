@@ -1,8 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-
 import '../theme/app_theme.dart';
 
+/// CHPA Heritage Logo — a custom-painted archway/obelisk mark.
+///
+/// Depicts:
+///  • A pointed Aksumite arch (outer gate silhouette)
+///  • A stylised obelisk inside the arch
+///  • A golden halo ring at the apex
+///  • Geometric diamond-lattice ornaments flanking the gate
+///
+/// Pure [CustomPainter] — no external assets required.
 class HeritageLogoWidget extends StatelessWidget {
   final double size;
   final Color primaryColor;
@@ -42,6 +50,7 @@ class _HeritagePainter extends CustomPainter {
     final h = size.height;
     final cx = w / 2;
 
+    // ── Outer arch (gate silhouette) ────────────────────────────────────────
     final archPaint = Paint()
       ..color = primary
       ..style = PaintingStyle.stroke
@@ -50,13 +59,17 @@ class _HeritagePainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
 
     final archPath = Path();
+    // Left pillar
     archPath.moveTo(cx - w * 0.30, h * 0.95);
     archPath.lineTo(cx - w * 0.30, h * 0.38);
+    // Arch curve to apex
     archPath.quadraticBezierTo(cx - w * 0.30, h * 0.10, cx, h * 0.04);
+    // Right side
     archPath.quadraticBezierTo(cx + w * 0.30, h * 0.10, cx + w * 0.30, h * 0.38);
     archPath.lineTo(cx + w * 0.30, h * 0.95);
     canvas.drawPath(archPath, archPaint);
 
+    // ── Base / lintel ───────────────────────────────────────────────────────
     final basePaint = Paint()
       ..color = primary
       ..style = PaintingStyle.stroke
@@ -68,6 +81,7 @@ class _HeritagePainter extends CustomPainter {
       basePaint,
     );
 
+    // ── Obelisk (inside arch) ───────────────────────────────────────────────
     final obFill = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topCenter,
@@ -76,7 +90,7 @@ class _HeritagePainter extends CustomPainter {
       ).createShader(Rect.fromLTWH(cx - w * 0.08, h * 0.18, w * 0.16, h * 0.60));
 
     final obPath = Path();
-    obPath.moveTo(cx, h * 0.18);
+    obPath.moveTo(cx, h * 0.18); // apex
     obPath.lineTo(cx + w * 0.08, h * 0.55);
     obPath.lineTo(cx + w * 0.10, h * 0.78);
     obPath.lineTo(cx - w * 0.10, h * 0.78);
@@ -84,36 +98,33 @@ class _HeritagePainter extends CustomPainter {
     obPath.close();
     canvas.drawPath(obPath, obFill);
 
+    // Obelisk stroke
     final obStroke = Paint()
       ..color = primary.withOpacity(0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.022;
     canvas.drawPath(obPath, obStroke);
 
+    // ── Halo ring at apex ───────────────────────────────────────────────────
     final haloPaint = Paint()
       ..color = primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = w * 0.045;
     canvas.drawCircle(Offset(cx, h * 0.14), w * 0.115, haloPaint);
 
+    // Inner halo dot
     final dotPaint = Paint()..color = primary.withOpacity(0.85);
     canvas.drawCircle(Offset(cx, h * 0.14), w * 0.038, dotPaint);
 
+    // ── Diamond lattice ornaments — left ────────────────────────────────────
     _drawDiamond(canvas, Offset(cx - w * 0.42, h * 0.55), w * 0.07, secondary);
-    _drawDiamond(
-      canvas,
-      Offset(cx - w * 0.42, h * 0.70),
-      w * 0.05,
-      secondary.withOpacity(0.6),
-    );
-    _drawDiamond(canvas, Offset(cx + w * 0.42, h * 0.55), w * 0.07, secondary);
-    _drawDiamond(
-      canvas,
-      Offset(cx + w * 0.42, h * 0.70),
-      w * 0.05,
-      secondary.withOpacity(0.6),
-    );
+    _drawDiamond(canvas, Offset(cx - w * 0.42, h * 0.70), w * 0.05, secondary.withOpacity(0.6));
 
+    // ── Diamond lattice ornaments — right ───────────────────────────────────
+    _drawDiamond(canvas, Offset(cx + w * 0.42, h * 0.55), w * 0.07, secondary);
+    _drawDiamond(canvas, Offset(cx + w * 0.42, h * 0.70), w * 0.05, secondary.withOpacity(0.6));
+
+    // ── Cross-hatch detail lines on obelisk ─────────────────────────────────
     final detailPaint = Paint()
       ..color = Colors.white.withOpacity(0.18)
       ..strokeWidth = w * 0.012;
@@ -139,6 +150,7 @@ class _HeritagePainter extends CustomPainter {
     canvas.drawPath(path, paint);
   }
 
+  /// Returns the half-width fraction of the obelisk at a given y position.
   double _obeliskHalfWidthAt(double y, double h) {
     final t = ((y / h) - 0.18) / (0.78 - 0.18);
     if (t < 0 || t > 1) return 0;
@@ -151,6 +163,7 @@ class _HeritagePainter extends CustomPainter {
       old.primary != primary || old.secondary != secondary;
 }
 
+/// Animated version with a subtle gold pulse glow — use in login screens.
 class AnimatedHeritageLogoWidget extends StatefulWidget {
   final double size;
   const AnimatedHeritageLogoWidget({super.key, this.size = 80});
@@ -160,7 +173,8 @@ class AnimatedHeritageLogoWidget extends StatefulWidget {
       _AnimatedHeritageLogoWidgetState();
 }
 
-class _AnimatedHeritageLogoWidgetState extends State<AnimatedHeritageLogoWidget>
+class _AnimatedHeritageLogoWidgetState
+    extends State<AnimatedHeritageLogoWidget>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _glow;
