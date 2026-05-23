@@ -1,8 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-
 import '../theme/app_theme.dart';
 
+/// Premium frosted glass card.
+///
+/// - [frosted] = true → true backdrop blur + shimmer gradient overlay
+/// - [frosted] = false → solid warm-dark parchment surface card
+/// - [glowColor] → optional ambient glow via boxShadow
 class GlassCard extends StatelessWidget {
   final Widget child;
   final double borderRadius;
@@ -42,6 +46,7 @@ class GlassCard extends StatelessWidget {
           ]
         : <BoxShadow>[];
 
+    // ── Frosted variant ─────────────────────────────────────────────────────
     if (frosted) {
       return ClipRRect(
         borderRadius: effectiveRadius,
@@ -52,6 +57,7 @@ class GlassCard extends StatelessWidget {
             padding: padding ?? const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: effectiveRadius,
+              // Warm glassmorphic fill
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -72,6 +78,7 @@ class GlassCard extends StatelessWidget {
       );
     }
 
+    // ── Solid warm-dark variant ─────────────────────────────────────────────
     return Container(
       margin: margin,
       padding: padding ?? const EdgeInsets.all(16),
