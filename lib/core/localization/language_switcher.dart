@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'app_translations.dart';
 
-class LanguageSwitcher extends StatelessWidget {
+/// Displays English (🇺🇸) and Amharic (🇪🇹) flag buttons.
+/// Tapping a flag switches the app language immediately.
+class LanguageSwitcher extends ConsumerWidget {
   const LanguageSwitcher({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentLang = ref.watch(languageProvider);
+
     return Container(
       height: 32,
       padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -15,48 +21,69 @@ class LanguageSwitcher extends StatelessWidget {
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          _FlagChip(emoji: '🇺🇸', label: 'EN', isActive: true),
-          SizedBox(width: 4),
-          _FlagChip(emoji: '🇪🇹', label: 'AM', isActive: false),
+        children: [
+          _FlagButton(
+            emoji: '🇺🇸',
+            label: 'EN',
+            isActive: currentLang == 'en',
+            onTap: () => ref.read(languageProvider.notifier).setLanguage('en'),
+          ),
+          Container(
+            width: 1,
+            height: 16,
+            color: Colors.white.withOpacity(0.1),
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+          ),
+          _FlagButton(
+            emoji: '🇪🇹',
+            label: 'AM',
+            isActive: currentLang == 'am',
+            onTap: () => ref.read(languageProvider.notifier).setLanguage('am'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _FlagChip extends StatelessWidget {
+class _FlagButton extends StatelessWidget {
   final String emoji;
   final String label;
   final bool isActive;
+  final VoidCallback onTap;
 
-  const _FlagChip({
+  const _FlagButton({
     required this.emoji,
     required this.label,
     required this.isActive,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.white.withOpacity(0.1) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : Colors.white38,
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.white.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.white38,
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
