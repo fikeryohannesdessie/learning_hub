@@ -1,16 +1,17 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../localization/localization.dart';
 import '../theme/app_theme.dart';
 import 'heritage_logo.dart';
 
-class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
+class SharedAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final String? title;
   final PreferredSizeWidget? bottom;
   final List<Widget>? extraActions;
   final Widget? leading;
+  final bool showProfile;
   final bool switcherOnRight;
 
   const SharedAppBar({
@@ -19,11 +20,12 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.bottom,
     this.extraActions,
     this.leading,
+    this.showProfile = true,
     this.switcherOnRight = false,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return AppBar(
       centerTitle: true,
       toolbarHeight: title != null ? 72 : kToolbarHeight,
@@ -52,7 +54,7 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading:
           leading ??
           (Navigator.of(context).canPop()
-              ? null
+              ? null // Allow AppBar to show the default back button
               : const Padding(
                   padding: EdgeInsets.only(left: 12),
                   child: Center(child: HeritageLogoWidget(size: 32)),
@@ -83,15 +85,34 @@ class SharedAppBar extends StatelessWidget implements PreferredSizeWidget {
       bottom: bottom,
       actions: [
         if (extraActions != null) ...extraActions!,
+        if (showProfile)
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: IconButton(
+              icon: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppTheme.kAccent.withOpacity(0.5),
+                    width: 1.5,
+                  ),
+                  color: Colors.white.withOpacity(0.06),
+                ),
+                child: const Icon(
+                  Icons.person_outline,
+                  color: AppTheme.kParchment,
+                  size: 18,
+                ),
+              ),
+              onPressed: () => context.push('/profile'),
+            ),
+          ),
         if (switcherOnRight) ...[
           const Center(child: LanguageSwitcher()),
           const SizedBox(width: 12),
         ],
-        IconButton(
-          icon: const Icon(Icons.account_circle_outlined),
-          onPressed: () => context.push('/profile'),
-        ),
-        const SizedBox(width: 8),
       ],
     );
   }
