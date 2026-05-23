@@ -2,20 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
+  // ── Heritage Cultural Palette ──────────────────────────────────────────────
+  /// Deep warm almost-black — like charred ancient stone
   static const Color kBg = Color(0xFF0D0B08);
+
+  /// Warm brown-black surface — like aged parchment in shadow
   static const Color kSurface = Color(0xFF1C1710);
+
+  /// Heritage gold — the primary accent, UNESCO medal gold
   static const Color kAccent = Color(0xFFD4A843);
+
+  /// Terracotta — secondary warm accent
   static const Color kTerracotta = Color(0xFFBF6B3A);
+
+  /// Ancient lapis blue — cool contrast accent
   static const Color kAncientBlue = Color(0xFF3A6D8C);
+
+  /// Parchment white — for soft text and highlights
   static const Color kParchment = Color(0xFFF5ECD7);
+
+  /// Glass surface — slight warm tint
   static const Color kGlass = Color(0xFF1C1710);
+
+  /// Glass border — hairline warm-white stroke
   static const Color kGlassBorder = Color(0xFF3A3020);
-  static const Color errorColor = Color(0xFFD94F3D);
-  static const Color accent = kAccent;
+
+  // ── Legacy aliases kept for backward compat ───────────────────────────────
+  static const Color primaryColor = kAccent;
+  static const Color secondaryColor = kTerracotta;
+  static const Color accentColor = kAccent;
   static const Color backgroundColor = kBg;
   static const Color surfaceColor = kSurface;
+  static const Color errorColor = Color(0xFFD94F3D);
+  static const Color textDark = kParchment;
+  static const Color textLight = Color(0xAAF5ECD7);
+  static const Color textWhite = Colors.white;
 
-  static ThemeData get theme => ThemeData(
+  /// Role colours
+  static const Color ViewerColor = kAccent;
+  static const Color ContributorColor = kTerracotta;
+  static const Color adminColor = kAncientBlue;
+
+  // ── Main Theme ─────────────────────────────────────────────────────────────
+  static ThemeData get darkGlassTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     scaffoldBackgroundColor: kBg,
@@ -26,10 +55,10 @@ class AppTheme {
       surface: kSurface,
       onPrimary: kBg,
       onSurface: kParchment,
-      error: errorColor,
+      error: Color(0xFFD94F3D),
     ),
     textTheme: GoogleFonts.outfitTextTheme(
-      const TextTheme(
+      TextTheme(
         displayLarge: TextStyle(color: kParchment, fontWeight: FontWeight.bold),
         displayMedium: TextStyle(
           color: kParchment,
@@ -104,7 +133,7 @@ class AppTheme {
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xFF221D12),
+      fillColor: Color(0xFF221D12),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: kGlassBorder),
@@ -117,8 +146,8 @@ class AppTheme {
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: kAccent, width: 1.5),
       ),
-      labelStyle: const TextStyle(color: Color(0xAAF5ECD7)),
-      hintStyle: const TextStyle(color: Color(0x66F5ECD7)),
+      labelStyle: TextStyle(color: Color(0xAAF5ECD7)),
+      hintStyle: TextStyle(color: Color(0x66F5ECD7)),
       prefixIconColor: kAccent,
     ),
     tabBarTheme: TabBarThemeData(
@@ -137,7 +166,7 @@ class AppTheme {
     dividerColor: kGlassBorder,
     snackBarTheme: SnackBarThemeData(
       backgroundColor: kSurface,
-      contentTextStyle: const TextStyle(color: kParchment),
+      contentTextStyle: TextStyle(color: kParchment),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       behavior: SnackBarBehavior.floating,
     ),
