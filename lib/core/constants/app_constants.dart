@@ -54,7 +54,7 @@ class AppConstants {
   // Native heritage simulations
   static const String defaultHeritageSimulationId = 'lalibela';
 
-  // Local Storage Keys (Hive)
+  // Local Storage Keys (SQLite)
   static const String userBoxName = 'userBox';
   static const String artifactBoxName = 'artifactBox';
   static const String bookmarkBoxName = 'bookmarkBox';
