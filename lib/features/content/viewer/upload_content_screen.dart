@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/constants/app_constants.dart';
 import '../domain/content_domain.dart';
-import '../../../features/auth/providers/auth_controller.dart';
+import '../../auth/providers/auth_controller.dart';
 import '../provider/content_repository.dart';
 import '../../../core/localization/translated_text.dart';
 import '../../../core/theme/app_theme.dart';
@@ -42,10 +42,18 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
   }
 
   void _upload() async {
-    if (_pickedFile == null && (_selectedType == AppConstants.contentTypePDF || _selectedType == AppConstants.contentTypeVideo)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: TranslatedText(_selectedType == AppConstants.contentTypeVideo ? 'Please pick a video file' : 'Please pick a PDF file')));
+    if (_pickedFile == null &&
+        (_selectedType == AppConstants.contentTypePDF ||
+            _selectedType == AppConstants.contentTypeVideo)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: TranslatedText(
+            _selectedType == AppConstants.contentTypeVideo
+                ? 'Please pick a video file'
+                : 'Please pick a PDF file',
+          ),
+        ),
+      );
       return;
     }
 
@@ -86,7 +94,9 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: TranslatedText('Content uploaded for review')),
+          const SnackBar(
+            content: TranslatedText('Content uploaded for review'),
+          ),
         );
       }
     } catch (e) {
@@ -124,10 +134,7 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    accentColor.withOpacity(0.18),
-                    Colors.transparent,
-                  ],
+                  colors: [accentColor.withOpacity(0.18), Colors.transparent],
                 ),
               ),
             ),
@@ -158,7 +165,10 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
                   controller: _descriptionController,
                   maxLines: 3,
                   style: const TextStyle(color: Colors.white70),
-                  decoration: _inputDecoration('Description', 'Provide context for reviewers'),
+                  decoration: _inputDecoration(
+                    'Description',
+                    'Provide context for reviewers',
+                  ),
                 ),
                 const SizedBox(height: 24),
                 _sectionLabel('Classification'),
@@ -241,15 +251,25 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
                       ),
                       title: Text(
                         _pickedFile!.name,
-                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       subtitle: Text(
                         '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB',
-                        style: const TextStyle(color: Colors.white38, fontSize: 11),
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 11,
+                        ),
                       ),
                       trailing: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white24, size: 20),
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white24,
+                          size: 20,
+                        ),
                         onPressed: () => setState(() => _pickedFile = null),
                       ),
                     ),
@@ -257,16 +277,16 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
                 OutlinedButton.icon(
                   onPressed: _pickFile,
                   icon: Icon(
-                    _selectedType == AppConstants.contentTypeVideo 
-                        ? Icons.video_library 
+                    _selectedType == AppConstants.contentTypeVideo
+                        ? Icons.video_library
                         : Icons.attach_file,
                     size: 18,
                   ),
                   label: TranslatedText(
                     _pickedFile == null
-                        ? (_selectedType == AppConstants.contentTypeVideo 
-                            ? 'Pick video recording' 
-                            : 'Select PDF document')
+                        ? (_selectedType == AppConstants.contentTypeVideo
+                              ? 'Pick video recording'
+                              : 'Select PDF document')
                         : 'Change file source',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
@@ -274,12 +294,16 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
                     minimumSize: const Size(double.infinity, 56),
                     foregroundColor: Colors.white,
                     side: BorderSide(color: Colors.white.withOpacity(0.1)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 48),
                 if (_isUploading)
-                  const Center(child: CircularProgressIndicator(color: accentColor))
+                  const Center(
+                    child: CircularProgressIndicator(color: accentColor),
+                  )
                 else
                   ElevatedButton(
                     onPressed: _upload,
@@ -287,12 +311,17 @@ class _UploadContentScreenState extends ConsumerState<UploadContentScreen> {
                       minimumSize: const Size(double.infinity, 60),
                       backgroundColor: accentColor,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                     ),
                     child: const TranslatedText(
                       'Submit for Review',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 const SizedBox(height: 40),

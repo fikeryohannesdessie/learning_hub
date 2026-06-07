@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../auth/domain/auth_domain.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../features/auth/providers/auth_repository.dart';
-import '../../../features/auth/providers/auth_controller.dart';
+import '../../auth/providers/auth_repository.dart';
+import '../../auth/providers/auth_controller.dart';
 import '../../content/provider/content_repository.dart';
 import '../../artifacts/provider/artifact_repository.dart';
 import '../../../core/localization/translated_text.dart';
@@ -78,12 +78,15 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     final pendingContent = allContent
         .where(
           (c) =>
-              c.status == AppConstants.statusPending && !isVerificationUpload(c),
+              c.status == AppConstants.statusPending &&
+              !isVerificationUpload(c),
         )
         .toList();
 
     final pendingArtifacts = allArtifacts
-        .where((a) => a.status.toLowerCase().trim() == AppConstants.statusPending)
+        .where(
+          (a) => a.status.toLowerCase().trim() == AppConstants.statusPending,
+        )
         .toList();
 
     final pendingUsers = allUsers
@@ -342,16 +345,28 @@ class _ReviewListSection extends ConsumerWidget {
         String normalizeType(String rawType) {
           final t = rawType.toLowerCase().trim();
           switch (t) {
-            case 'book': case 'books': case 'document':
-            case 'documents': case 'doc': case 'pdfs':
+            case 'book':
+            case 'books':
+            case 'document':
+            case 'documents':
+            case 'doc':
+            case 'pdfs':
               return AppConstants.contentTypePDF;
-            case 'report': case 'reports': case 'worksheet': case 'worksheets':
+            case 'report':
+            case 'reports':
+            case 'worksheet':
+            case 'worksheets':
               return AppConstants.contentTypeWorksheet;
-            case 'analysis': case 'analyses': case 'quiz': case 'quizzes':
+            case 'analysis':
+            case 'analyses':
+            case 'quiz':
+            case 'quizzes':
               return AppConstants.contentTypeAnalysis;
-            case 'video': case 'videos':
+            case 'video':
+            case 'videos':
               return AppConstants.contentTypeVideo;
-            case 'audio': case 'audios':
+            case 'audio':
+            case 'audios':
               return AppConstants.contentTypeAudio;
             default:
               return t;
@@ -359,14 +374,11 @@ class _ReviewListSection extends ConsumerWidget {
         }
 
         final targetType = normalizeType(type);
-        final filtered = allPending
-            .where((c) {
-              final subject = (c.subject ?? '').toLowerCase().trim();
-              return normalizeType(c.type) == targetType &&
-                  subject != 'contributor verification';
-            })
-            .toList()
-          ..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
+        final filtered = allPending.where((c) {
+          final subject = (c.subject ?? '').toLowerCase().trim();
+          return normalizeType(c.type) == targetType &&
+              subject != 'contributor verification';
+        }).toList()..sort((a, b) => b.uploadedAt.compareTo(a.uploadedAt));
 
         if (filtered.isEmpty) {
           return _EmptyReviewState(message: 'No pending ${type}s to review');
@@ -652,10 +664,7 @@ class _UserCard extends ConsumerWidget {
                     : 'Verify Contributor',
                 onPressed: () => ref
                     .read(authControllerProvider.notifier)
-                    .updateVerificationStatus(
-                      user.uid,
-                      !user.isVerified,
-                    ),
+                    .updateVerificationStatus(user.uid, !user.isVerified),
               ),
             IconButton(
               icon: const Icon(
@@ -713,13 +722,9 @@ class _ArtifactReviewSection extends ConsumerWidget {
 
     return artifactsAsync.when(
       data: (artifacts) {
-        final pendingArtifacts = artifacts
-            .where((a) {
-              return a.status.toLowerCase().trim() ==
-                  AppConstants.statusPending;
-            })
-            .toList()
-          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        final pendingArtifacts = artifacts.where((a) {
+          return a.status.toLowerCase().trim() == AppConstants.statusPending;
+        }).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (pendingArtifacts.isEmpty) {
           return const _EmptyReviewState(

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as dart_math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:three_js/three_js.dart' as three;
 import 'package:three_js_math/three_js_math.dart' as math;
@@ -23,6 +24,7 @@ class HeritageViewer extends StatefulWidget {
 class _HeritageViewerState extends State<HeritageViewer> {
   three.ThreeJS? _threeJs;
   three.OrbitControls? _controls;
+  Timer? _sceneTimeout;
   bool _sceneReady = false;
   String? _sceneError;
 
@@ -30,6 +32,16 @@ class _HeritageViewerState extends State<HeritageViewer> {
   void initState() {
     super.initState();
     _initializeScene();
+    _sceneTimeout = Timer(const Duration(seconds: 12), () {
+      if (!mounted || _sceneReady || _sceneError != null) {
+        return;
+      }
+      setState(() {
+        _sceneError = kIsWeb
+            ? '3D viewer failed to initialize on web. Refresh the page after the WebGL support script loads, and make sure your browser supports WebGL2.'
+            : '3D viewer failed to initialize.';
+      });
+    });
   }
 
   void _initializeScene() {
@@ -115,10 +127,13 @@ class _HeritageViewerState extends State<HeritageViewer> {
     return _threeJs;
   }
 
+
+
   void _markSceneReady() {
     if (!mounted || _sceneReady) {
       return;
     }
+    _sceneTimeout?.cancel();
     setState(() {
       _sceneReady = true;
     });
@@ -302,8 +317,13 @@ class _HeritageViewerState extends State<HeritageViewer> {
 
   @override
   void dispose() {
+    _sceneTimeout?.cancel();
     _controls?.dispose();
-    _threeJs?.dispose();
+    final engine = _threeJs;
+    if (engine != null) {
+      engine.dispose();
+      three.loading.clear();
+    }
     super.dispose();
   }
 }
@@ -315,9 +335,9 @@ class _InteractionHint extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.34),
+        color: Colors.black.withValues(alpha: 0.34),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: const Padding(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),

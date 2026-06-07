@@ -1,21 +1,80 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+
+import '../utils/api_config.dart';
+
+class _WebSQLiteClient {
+  String get _baseUrl => '${ApiConfig.baseUrl}/storage';
+
+  Future<List<Map<String, Object?>>> getBoxEntries(String boxName) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/${Uri.encodeComponent(boxName)}'),
+    );
+
+    if (response.statusCode != 200 || response.body.isEmpty) {
+      return <Map<String, Object?>>[];
+    }
+
+    final raw = jsonDecode(response.body);
+    if (raw is! List) {
+      return <Map<String, Object?>>[];
+    }
+
+    return raw
+        .map((dynamic row) => Map<String, Object?>.from(row as Map))
+        .toList();
+  }
+
+  Future<void> putEntry(String boxName, String key, _EncodedValue value) async {
+    final response = await http.put(
+      Uri.parse('$_baseUrl/${Uri.encodeComponent(boxName)}/${Uri.encodeComponent(key)}'),
+      headers: const <String, String>{'Content-Type': 'application/json'},
+      body: jsonEncode(<String, Object?>{
+        'value_type': value.type,
+        'text_value': value.textValue,
+        'blob_value': value.blobValue == null
+            ? null
+            : base64Encode(value.blobValue!),
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Failed to store web SQLite entry for box "$boxName" and key "$key".',
+      );
+    }
+  }
+
+  Future<void> deleteEntry(String boxName, String key) async {
+    final response = await http.delete(
+      Uri.parse('$_baseUrl/${Uri.encodeComponent(boxName)}/${Uri.encodeComponent(key)}'),
+    );
+
+    if (response.statusCode != 200) {
+      throw StateError(
+        'Failed to delete web SQLite entry for box "$boxName" and key "$key".',
+      );
+    }
+  }
+}
 
 class SQLiteStorage {
   SQLiteStorage._();
 
   static Database? _database;
+  static final _WebSQLiteClient _webClient = _WebSQLiteClient();
   static final Map<String, SQLiteBox<dynamic>> _boxes =
       <String, SQLiteBox<dynamic>>{};
 
   static Future<void> initFlutter() async {
-    if (_database != null) {
+    if (kIsWeb || _database != null) {
       return;
     }
 
@@ -49,7 +108,9 @@ class SQLiteStorage {
       return existing as SQLiteBox<T>;
     }
 
-    final box = SQLiteBox<T>._(name, _database!);
+    final box = kIsWeb
+        ? SQLiteBox<T>._web(name, _webClient)
+        : SQLiteBox<T>._native(name, _database!);
     await box._load();
     box._bindListenable();
     _boxes[name] = box;
@@ -66,12 +127,21 @@ class SQLiteStorage {
 }
 
 class SQLiteBox<T> {
-  SQLiteBox._(this.name, this._database)
-    : _controller = StreamController<SQLiteBoxEvent>.broadcast(),
+  SQLiteBox._native(this.name, Database database)
+    : _database = database,
+      _webClient = null,
+      _controller = StreamController<SQLiteBoxEvent>.broadcast(),
+      _listenable = _SQLiteBoxListenable();
+
+  SQLiteBox._web(this.name, _WebSQLiteClient webClient)
+    : _database = null,
+      _webClient = webClient,
+      _controller = StreamController<SQLiteBoxEvent>.broadcast(),
       _listenable = _SQLiteBoxListenable();
 
   final String name;
-  final Database _database;
+  final Database? _database;
+  final _WebSQLiteClient? _webClient;
   final StreamController<SQLiteBoxEvent> _controller;
   final _SQLiteBoxListenable _listenable;
   final LinkedHashMap<String, dynamic> _cache = LinkedHashMap<String, dynamic>();
@@ -81,12 +151,17 @@ class SQLiteBox<T> {
   }
 
   Future<void> _load() async {
-    final rows = await _database.query(
-      'storage_entries',
-      where: 'box_name = ?',
-      whereArgs: <Object>[name],
-      orderBy: 'updated_at ASC',
-    );
+    final List<Map<String, Object?>> rows;
+    if (_webClient != null) {
+      rows = await _webClient.getBoxEntries(name);
+    } else {
+      rows = await _database!.query(
+        'storage_entries',
+        where: 'box_name = ?',
+        whereArgs: <Object>[name],
+        orderBy: 'updated_at ASC',
+      );
+    }
 
     for (final row in rows) {
       final key = row['entry_key'] as String;
@@ -106,18 +181,22 @@ class SQLiteBox<T> {
     final keyString = key.toString();
     final encoded = _encodeValue(value);
 
-    await _database.insert(
-      'storage_entries',
-      <String, Object?>{
-        'box_name': name,
-        'entry_key': keyString,
-        'value_type': encoded.type,
-        'text_value': encoded.textValue,
-        'blob_value': encoded.blobValue,
-        'updated_at': DateTime.now().millisecondsSinceEpoch,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    if (_webClient != null) {
+      await _webClient.putEntry(name, keyString, encoded);
+    } else {
+      await _database!.insert(
+        'storage_entries',
+        <String, Object?>{
+          'box_name': name,
+          'entry_key': keyString,
+          'value_type': encoded.type,
+          'text_value': encoded.textValue,
+          'blob_value': encoded.blobValue,
+          'updated_at': DateTime.now().millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
 
     _cache[keyString] = encoded.cachedValue;
     _notify(SQLiteBoxEvent(key: keyString, value: encoded.cachedValue));
@@ -126,11 +205,15 @@ class SQLiteBox<T> {
   Future<void> delete(dynamic key) async {
     final keyString = key.toString();
 
-    await _database.delete(
-      'storage_entries',
-      where: 'box_name = ? AND entry_key = ?',
-      whereArgs: <Object>[name, keyString],
-    );
+    if (_webClient != null) {
+      await _webClient.deleteEntry(name, keyString);
+    } else {
+      await _database!.delete(
+        'storage_entries',
+        where: 'box_name = ? AND entry_key = ?',
+        whereArgs: <Object>[name, keyString],
+      );
+    }
 
     _cache.remove(keyString);
     _notify(SQLiteBoxEvent(key: keyString, value: null, deleted: true));
@@ -161,7 +244,20 @@ class SQLiteBox<T> {
 
     switch (valueType) {
       case 'blob':
-        return row['blob_value'] as Uint8List?;
+        final raw = row['blob_value'];
+        if (raw == null) {
+          return null;
+        }
+        if (raw is Uint8List) {
+          return raw;
+        }
+        if (raw is List<int>) {
+          return Uint8List.fromList(raw);
+        }
+        if (raw is String && raw.isNotEmpty) {
+          return Uint8List.fromList(base64Decode(raw));
+        }
+        return null;
       case 'string':
         return row['text_value'] as String?;
       case 'json':

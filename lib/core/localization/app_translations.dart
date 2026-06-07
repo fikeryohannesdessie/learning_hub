@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:translator/translator.dart';
 
 import '../storage/database_helper.dart';
@@ -18,7 +17,7 @@ class LanguageController extends Notifier<String> {
 
 // ─── Translation cache ────────────────────────────────────────────────────────
 //
-// Cached in a dedicated SQLite table: translations(key TEXT PK, value TEXT).
+// Cached in a dedicated translations cache using DatabaseHelper.
 // The table is created lazily on first use.
 
 bool _tableReady = false;
@@ -29,12 +28,7 @@ Future<void> initTranslations() async {
 
 Future<void> _ensureTable() async {
   if (_tableReady) return;
-  await DatabaseHelper.db.execute('''
-    CREATE TABLE IF NOT EXISTS translations (
-      key   TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    )
-  ''');
+  await db.initTranslationsTable();
   _tableReady = true;
 }
 
@@ -48,26 +42,17 @@ Future<String> translateText(String text, String targetLang) async {
   final key = '$targetLang:$text';
   await _ensureTable();
 
-  // Check the SQLite translations cache first.
-  final cached = await DatabaseHelper.db.query(
-    'translations',
-    columns: ['value'],
-    where: 'key = ?',
-    whereArgs: [key],
-    limit: 1,
-  );
-  if (cached.isNotEmpty) {
-    return cached.first['value'] as String;
+  // Check the translations cache first.
+  final cached = await db.getCachedTranslation(key);
+  if (cached != null) {
+    return cached;
   }
 
   try {
     final result = await _googleTranslator.translate(text, to: targetLang);
 
-    // Save to the SQLite translations cache.
-    await DatabaseHelper.db.insert('translations', {
-      'key': key,
-      'value': result.text,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    // Save to the translations cache.
+    await db.cacheTranslation(key, result.text);
 
     return result.text;
   } catch (_) {

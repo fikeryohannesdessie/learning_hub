@@ -10,8 +10,8 @@ import '../../../core/widgets/glass_card.dart';
 import '../../../core/widgets/shared_app_bar.dart';
 import '../../../core/utils/audio_utils.dart';
 import '../../artifacts/domain/artifact_domain.dart';
-import '../../content/application/content_application.dart';
-import '../../content/domain/content_domain.dart';
+import '../application/content_application.dart';
+import '../domain/content_domain.dart';
 
 class ContentCollectionScreen extends ConsumerWidget {
   final String title;
@@ -443,12 +443,15 @@ class _ContentGridItem extends ConsumerWidget {
     } else if (item.type == AppConstants.contentTypeAudio) {
       showAudioPreview(context, ref, item);
     } else if (item.type == AppConstants.contentTypeVideo) {
-      context.push('/video-viewer', extra: {
-        'url': item.url ?? '',
-        'title': item.title,
-        'fileId': item.id,
-        'classification': item.gradeLevel,
-      });
+      context.push(
+        '/video-viewer',
+        extra: {
+          'url': item.url ?? '',
+          'title': item.title,
+          'fileId': item.id,
+          'classification': item.gradeLevel,
+        },
+      );
     }
   }
 }

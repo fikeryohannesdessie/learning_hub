@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../artifacts/domain/artifact_domain.dart';
-import '../bookmark/domain/bookmark_domain.dart';
 import '../../core/localization/localization.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/shared_app_bar.dart';

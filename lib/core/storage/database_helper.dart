@@ -1,19 +1,133 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-/// Central SQLite database for CHPA.
-///
-/// Real schema — one table per domain. No key/value box abstraction.
-/// All repositories use this helper directly with typed SQL queries.
+import '../utils/api_config.dart';
+
+class _WebClient {
+  String get baseUrl => ApiConfig.baseUrl;
+
+  Future<Map<String, dynamic>?> _get(String path) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl$path'));
+      if (res.statusCode == 200 && res.body != 'null' && res.body.isNotEmpty) {
+        return jsonDecode(res.body) as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      print('Web API error: $e');
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> _getList(String path) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl$path'));
+      if (res.statusCode == 200 && res.body != 'null' && res.body.isNotEmpty) {
+        final list = jsonDecode(res.body) as List;
+        return list.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+    } catch (e) {
+      print('Web API error: $e');
+    }
+    return [];
+  }
+
+  Future<void> _post(String path, dynamic body) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      if (res.statusCode != 200) {
+        throw StateError('Web API POST $path failed: ${res.statusCode} ${res.body}');
+      }
+    } catch (e) {
+      print('Web API error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _put(String path, dynamic body) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$baseUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      if (res.statusCode != 200) {
+        throw StateError('Web API PUT $path failed: ${res.statusCode} ${res.body}');
+      }
+    } catch (e) {
+      print('Web API error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _delete(String path) async {
+    try {
+      final res = await http.delete(Uri.parse('$baseUrl$path'));
+      if (res.statusCode != 200) {
+        throw StateError('Web API DELETE $path failed: ${res.statusCode} ${res.body}');
+      }
+    } catch (e) {
+      print('Web API error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> uploadFile(String type, String id, Uint8List bytes) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/files/$type/$id'),
+        headers: const {'Content-Type': 'application/octet-stream'},
+        body: bytes,
+      );
+      if (res.statusCode != 200) {
+        throw StateError(
+          'Web API upload file $type/$id failed: ${res.statusCode} ${res.body}',
+        );
+      }
+    } catch (e) {
+      print('Web API upload error: $e');
+      rethrow;
+    }
+  }
+
+  Future<Uint8List?> downloadFile(String type, String id) async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/files/$type/$id'));
+      if (res.statusCode == 200) {
+        return res.bodyBytes;
+      }
+    } catch (e) {
+      print('Web API download error: $e');
+    }
+    return null;
+  }
+
+  Future<void> deleteFile(String type, String id) async {
+    try {
+      await http.delete(Uri.parse('$baseUrl/files/$type/$id'));
+    } catch (e) {
+      print('Web API delete file error: $e');
+    }
+  }
+}
+
+/// Central SQLite database for CHPA (fallback to REST backend on Web).
 class DatabaseHelper {
   DatabaseHelper._();
 
   static Database? _db;
+  final _WebClient _web = _WebClient();
 
   static Future<String> get _filesDir async {
+    if (kIsWeb) return '';
     final root = await getDatabasesPath();
     final dir = Directory(p.join(root, 'chpa_files'));
     if (!await dir.exists()) await dir.create(recursive: true);
@@ -23,6 +137,7 @@ class DatabaseHelper {
   // ─────────────────────────────────────────────────────────── init ──────────
 
   static Future<void> init() async {
+    if (kIsWeb) return;
     if (_db != null) return;
     final dbPath = p.join(await getDatabasesPath(), 'chpa.db');
     _db = await openDatabase(
@@ -35,10 +150,11 @@ class DatabaseHelper {
   }
 
   static Future<void> _runDataMigrations() async {
+    if (kIsWeb) return;
     // Solid fix for legacy audio items saved with incorrect grade_level
     await _db!.execute('''
-      UPDATE content 
-      SET grade_level = 'intangible' 
+      UPDATE content
+      SET grade_level = 'intangible'
       WHERE type = 'audio' AND grade_level != 'intangible'
     ''');
 
@@ -53,9 +169,9 @@ class DatabaseHelper {
             extraData['gradeLevel'] = 'intangible';
             extraData['classification'] = 'intangible';
             await _db!.update(
-              'bookmarks', 
-              {'extra_data': jsonEncode(extraData)}, 
-              where: 'id = ?', 
+              'bookmarks',
+              {'extra_data': jsonEncode(extraData)},
+              where: 'id = ?',
               whereArgs: [b['id']],
             );
           }
@@ -66,6 +182,9 @@ class DatabaseHelper {
 
 
   static Database get db {
+    if (kIsWeb) {
+      throw UnsupportedError('DatabaseHelper.db is not supported on Web. Use abstract methods.');
+    }
     assert(_db != null, 'DatabaseHelper.init() must be called first.');
     return _db!;
   }
@@ -209,6 +328,7 @@ class DatabaseHelper {
   }
 
   static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (kIsWeb) return;
     // Future migration logic goes here.
     if (oldVersion < 2) {
       // Drop legacy key-value table if it exists from a previous install.
@@ -219,10 +339,17 @@ class DatabaseHelper {
   // ─────────────────────────────────────────────────────── users ────────────
 
   Future<void> upsertUser(Map<String, dynamic> row) async {
+    if (kIsWeb) {
+      await _web._post('/users', row);
+      return;
+    }
     await db.insert('users', row, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    if (kIsWeb) {
+      return _web._get('/users/by-email/${Uri.encodeComponent(email)}');
+    }
     final rows = await db.query(
       'users',
       where: 'email = ?',
@@ -233,6 +360,9 @@ class DatabaseHelper {
   }
 
   Future<Map<String, dynamic>?> getUserByUid(String uid) async {
+    if (kIsWeb) {
+      return _web._get('/users/by-uid/$uid');
+    }
     final rows = await db.query(
       'users',
       where: 'uid = ?',
@@ -243,14 +373,25 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllUsers() async {
+    if (kIsWeb) {
+      return _web._getList('/users');
+    }
     return db.query('users', orderBy: 'created_at ASC');
   }
 
   Future<void> updateUser(String uid, Map<String, dynamic> fields) async {
+    if (kIsWeb) {
+      await _web._put('/users/$uid', fields);
+      return;
+    }
     await db.update('users', fields, where: 'uid = ?', whereArgs: [uid]);
   }
 
   Future<void> deleteUser(String email) async {
+    if (kIsWeb) {
+      await _web._delete('/users/${Uri.encodeComponent(email)}');
+      return;
+    }
     await db.delete(
       'users',
       where: 'email = ?',
@@ -261,6 +402,10 @@ class DatabaseHelper {
   // ──────────────────────────────────────────────── user passwords ───────────
 
   Future<void> upsertPassword(String email, String password) async {
+    if (kIsWeb) {
+      await _web._post('/passwords', {'email': email, 'password': password});
+      return;
+    }
     await db.insert(
       'user_passwords',
       {'email': email.trim().toLowerCase(), 'password': password},
@@ -269,6 +414,14 @@ class DatabaseHelper {
   }
 
   Future<String?> getPassword(String email) async {
+    if (kIsWeb) {
+      final url = '${ApiConfig.baseUrl}/passwords/${Uri.encodeComponent(email)}';
+      final res = await http.get(Uri.parse(url));
+      if (res.statusCode == 200 && res.body != 'null' && res.body.isNotEmpty) {
+        return jsonDecode(res.body) as String?;
+      }
+      return null;
+    }
     final rows = await db.query(
       'user_passwords',
       columns: ['password'],
@@ -280,6 +433,10 @@ class DatabaseHelper {
   }
 
   Future<void> deletePassword(String email) async {
+    if (kIsWeb) {
+      await _web._delete('/passwords/${Uri.encodeComponent(email)}');
+      return;
+    }
     await db.delete(
       'user_passwords',
       where: 'email = ?',
@@ -290,10 +447,17 @@ class DatabaseHelper {
   // ──────────────────────────────────────────────────── content ─────────────
 
   Future<void> upsertContent(Map<String, dynamic> row) async {
+    if (kIsWeb) {
+      await _web._post('/content', row);
+      return;
+    }
     await db.insert('content', row, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> getContentById(String id) async {
+    if (kIsWeb) {
+      return _web._get('/content/$id');
+    }
     final rows = await db.query(
       'content',
       where: 'id = ?',
@@ -304,10 +468,16 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllContent() async {
+    if (kIsWeb) {
+      return _web._getList('/content');
+    }
     return db.query('content', orderBy: 'uploaded_at DESC');
   }
 
   Future<List<Map<String, dynamic>>> getContentByStatus(String status) async {
+    if (kIsWeb) {
+      return _web._getList('/content?status=${Uri.encodeComponent(status)}');
+    }
     return db.query(
       'content',
       where: 'status = ?',
@@ -317,6 +487,9 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getContentByAuthor(String authorId) async {
+    if (kIsWeb) {
+      return _web._getList('/content?author_id=$authorId');
+    }
     return db.query(
       'content',
       where: 'author_id = ?',
@@ -331,6 +504,14 @@ class DatabaseHelper {
     String? rejectionReason,
     String? approvedAt,
   }) async {
+    if (kIsWeb) {
+      await _web._put('/content/$id/status', {
+        'status': status,
+        'rejection_reason': rejectionReason,
+        'approved_at': approvedAt,
+      });
+      return;
+    }
     final fields = <String, dynamic>{'status': status};
     if (rejectionReason != null) fields['rejection_reason'] = rejectionReason;
     if (approvedAt != null) fields['approved_at'] = approvedAt;
@@ -338,6 +519,10 @@ class DatabaseHelper {
   }
 
   Future<void> deleteContentByAuthor(String authorId) async {
+    if (kIsWeb) {
+      await _web._delete('/content/by-author/$authorId');
+      return;
+    }
     final ids = (await getContentByAuthor(authorId))
         .map((r) => r['id'] as String)
         .toList();
@@ -347,24 +532,39 @@ class DatabaseHelper {
     }
   }
 
+  Future<void> deleteContentById(String id) async {
+    if (kIsWeb) {
+      await _web._delete('/content/$id');
+      return;
+    }
+    await db.delete('content', where: 'id = ?', whereArgs: [id]);
+  }
+
   // ─────────────────────────────────────────── content files (blobs) ─────────
 
   Future<void> upsertContentFile(String contentId, Uint8List bytes) async {
+    if (kIsWeb) {
+      await _web.uploadFile('content', contentId, bytes);
+      return;
+    }
     final dir = await _filesDir;
     final file = File(p.join(dir, 'content_$contentId.bin'));
     await file.writeAsBytes(bytes);
-    
+
     await db.delete('content_files', where: 'content_id = ?', whereArgs: [contentId]);
   }
 
   Future<Uint8List?> getContentFile(String contentId) async {
+    if (kIsWeb) {
+      return _web.downloadFile('content', contentId);
+    }
     final dir = await _filesDir;
     final file = File(p.join(dir, 'content_$contentId.bin'));
-    
+
     if (await file.exists()) {
       return await file.readAsBytes();
     }
-    
+
     try {
       final rows = await db.query(
         'content_files',
@@ -384,6 +584,10 @@ class DatabaseHelper {
   }
 
   Future<void> deleteContentFile(String contentId) async {
+    if (kIsWeb) {
+      await _web.deleteFile('content', contentId);
+      return;
+    }
     final dir = await _filesDir;
     final file = File(p.join(dir, 'content_$contentId.bin'));
     if (await file.exists()) await file.delete();
@@ -398,10 +602,17 @@ class DatabaseHelper {
   // ────────────────────────────────────────────────────── artifacts ──────────
 
   Future<void> upsertArtifact(Map<String, dynamic> row) async {
+    if (kIsWeb) {
+      await _web._post('/artifacts', row);
+      return;
+    }
     await db.insert('artifacts', row, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<Map<String, dynamic>?> getArtifactById(String id) async {
+    if (kIsWeb) {
+      return _web._get('/artifacts/$id');
+    }
     final rows = await db.query(
       'artifacts',
       where: 'id = ?',
@@ -412,10 +623,16 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllArtifacts() async {
+    if (kIsWeb) {
+      return _web._getList('/artifacts');
+    }
     return db.query('artifacts', orderBy: 'created_at DESC');
   }
 
   Future<List<Map<String, dynamic>>> getArtifactsByStatus(String status) async {
+    if (kIsWeb) {
+      return _web._getList('/artifacts?status=${Uri.encodeComponent(status)}');
+    }
     return db.query(
       'artifacts',
       where: 'status = ?',
@@ -427,6 +644,9 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getArtifactsByAuthor(
     String authorId,
   ) async {
+    if (kIsWeb) {
+      return _web._getList('/artifacts?author_id=$authorId');
+    }
     return db.query(
       'artifacts',
       where: 'author_id = ?',
@@ -439,6 +659,9 @@ class DatabaseHelper {
     String status,
     String classification,
   ) async {
+    if (kIsWeb) {
+      return _web._getList('/artifacts?status=${Uri.encodeComponent(status)}&classification=${Uri.encodeComponent(classification)}');
+    }
     return db.query(
       'artifacts',
       where: 'status = ? AND classification = ?',
@@ -452,12 +675,25 @@ class DatabaseHelper {
     String status, {
     String? rejectionReason,
   }) async {
+    if (kIsWeb) {
+      await _web._put('/artifacts/$id/status', {
+        'status': status,
+        'rejection_reason': rejectionReason,
+      });
+      return;
+    }
     final fields = <String, dynamic>{'status': status};
     if (rejectionReason != null) fields['rejection_reason'] = rejectionReason;
     await db.update('artifacts', fields, where: 'id = ?', whereArgs: [id]);
   }
 
   Future<void> updateArtifactViewerIds(String id, String viewerIdsJson) async {
+    if (kIsWeb) {
+      await _web._put('/artifacts/$id/viewer-ids', {
+        'viewer_ids_json': viewerIdsJson,
+      });
+      return;
+    }
     await db.update(
       'artifacts',
       {'viewer_ids_json': viewerIdsJson},
@@ -469,6 +705,10 @@ class DatabaseHelper {
   // ──────────────────────────────────────── artifact files (thumbnails) ───────
 
   Future<void> upsertArtifactFile(String artifactId, Uint8List bytes) async {
+    if (kIsWeb) {
+      await _web.uploadFile('artifact', artifactId, bytes);
+      return;
+    }
     final dir = await _filesDir;
     final file = File(p.join(dir, 'artifact_$artifactId.bin'));
     await file.writeAsBytes(bytes);
@@ -477,9 +717,12 @@ class DatabaseHelper {
   }
 
   Future<Uint8List?> getArtifactFile(String artifactId) async {
+    if (kIsWeb) {
+      return _web.downloadFile('artifact', artifactId);
+    }
     final dir = await _filesDir;
     final file = File(p.join(dir, 'artifact_$artifactId.bin'));
-    
+
     if (await file.exists()) {
       return await file.readAsBytes();
     }
@@ -505,6 +748,10 @@ class DatabaseHelper {
   // ────────────────────────────────────────────────────── bookmarks ──────────
 
   Future<void> upsertBookmark(Map<String, dynamic> row) async {
+    if (kIsWeb) {
+      await _web._post('/bookmarks', row);
+      return;
+    }
     await db.insert(
       'bookmarks',
       row,
@@ -513,14 +760,29 @@ class DatabaseHelper {
   }
 
   Future<List<Map<String, dynamic>>> getAllBookmarks() async {
+    if (kIsWeb) {
+      return _web._getList('/bookmarks');
+    }
     return db.query('bookmarks', orderBy: 'bookmarked_at DESC');
   }
 
   Future<void> deleteBookmark(String id) async {
+    if (kIsWeb) {
+      await _web._delete('/bookmarks/$id');
+      return;
+    }
     await db.delete('bookmarks', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<bool> bookmarkExists(String id) async {
+    if (kIsWeb) {
+      final url = '${ApiConfig.baseUrl}/bookmarks/${Uri.encodeComponent(id)}/exists';
+      final res = await http.get(Uri.parse(url));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as bool;
+      }
+      return false;
+    }
     final rows = await db.query(
       'bookmarks',
       columns: ['id'],
@@ -534,6 +796,10 @@ class DatabaseHelper {
   // ─────────────────────────────────────────── analysis results ─────────────
 
   Future<void> insertAnalysisResult(Map<String, dynamic> row) async {
+    if (kIsWeb) {
+      await _web._post('/analysis-results', row);
+      return;
+    }
     await db.insert(
       'analysis_results',
       row,
@@ -544,6 +810,9 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAnalysisResultsByArtifact(
     String artifactId,
   ) async {
+    if (kIsWeb) {
+      return _web._getList('/analysis-results/by-artifact/$artifactId');
+    }
     return db.query(
       'analysis_results',
       where: 'artifact_id = ?',
@@ -555,6 +824,9 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAnalysisResultsByUser(
     String userId,
   ) async {
+    if (kIsWeb) {
+      return _web._getList('/analysis-results/by-user/$userId');
+    }
     return db.query(
       'analysis_results',
       where: 'user_id = ?',
@@ -566,6 +838,10 @@ class DatabaseHelper {
   // ─────────────────────────────────────────────── user progress ────────────
 
   Future<void> upsertUserProgress(Map<String, dynamic> row) async {
+    if (kIsWeb) {
+      await _web._post('/user-progress', row);
+      return;
+    }
     await db.insert(
       'user_progress',
       row,
@@ -577,6 +853,9 @@ class DatabaseHelper {
     String userId,
     String artifactId,
   ) async {
+    if (kIsWeb) {
+      return _web._get('/user-progress/$userId/$artifactId');
+    }
     final rows = await db.query(
       'user_progress',
       where: 'user_id = ? AND artifact_id = ?',
@@ -589,6 +868,7 @@ class DatabaseHelper {
   // ─────────────────────────────────────────────── offline cache ────────────
 
   Future<void> upsertOfflineCache(String contentId, String filePath) async {
+    if (kIsWeb) return;
     await db.insert(
       'offline_cache',
       {'content_id': contentId, 'file_path': filePath},
@@ -597,6 +877,7 @@ class DatabaseHelper {
   }
 
   Future<String?> getOfflinePath(String contentId) async {
+    if (kIsWeb) return null;
     final rows = await db.query(
       'offline_cache',
       columns: ['file_path'],
@@ -605,6 +886,48 @@ class DatabaseHelper {
       limit: 1,
     );
     return rows.isEmpty ? null : rows.first['file_path'] as String?;
+  }
+
+  // ─────────────────────────────────────────────── translations cache ────────
+
+  Future<void> initTranslationsTable() async {
+    if (kIsWeb) return;
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS translations (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<String?> getCachedTranslation(String key) async {
+    if (kIsWeb) {
+      final url = '${ApiConfig.baseUrl}/translations/${Uri.encodeComponent(key)}';
+      final res = await http.get(Uri.parse(url));
+      if (res.statusCode == 200 && res.body != 'null' && res.body.isNotEmpty) {
+        return jsonDecode(res.body) as String?;
+      }
+      return null;
+    }
+    final cached = await db.query(
+      'translations',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [key],
+      limit: 1,
+    );
+    return cached.isEmpty ? null : cached.first['value'] as String?;
+  }
+
+  Future<void> cacheTranslation(String key, String value) async {
+    if (kIsWeb) {
+      await _web._post('/translations', {'key': key, 'value': value});
+      return;
+    }
+    await db.insert('translations', {
+      'key': key,
+      'value': value,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }
 

@@ -40,7 +40,7 @@ class ContentLocalDataSource {
       if (authorId == 'system' &&
           (legacyTitles.contains(title) || legacySubjects.contains(subject))) {
         final id = row['id'] as String;
-        await DatabaseHelper.db.delete('content', where: 'id = ?', whereArgs: [id]);
+        await db.deleteContentById(id);
         await db.deleteContentFile(id);
         debugPrint('SQLite: removed legacy seed content $id');
       }
